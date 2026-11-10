@@ -25,8 +25,10 @@ Scan only machines you own or are authorized to test. The CLI refuses public IP 
 
 ```bash
 pip install pytest
-python -m pytest -q      # 5 tests, each starts its own local test server
+python -m pytest -q      # 6 tests, each starts its own local test server
 python scanner.py 127.0.0.1 -p 1-1024
+python scanner.py 127.0.0.1 --top          # 20 most common ports
+python scanner.py 127.0.0.1 --json         # machine-readable output
 ```
 
 ## Limits

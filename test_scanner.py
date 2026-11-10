@@ -63,3 +63,14 @@ def test_private_check_and_cli_refuses_public(capsys):
     assert scanner.is_private("127.0.0.1")
     with pytest.raises(SystemExit):
         scanner.main(["8.8.8.8", "-p", "53"])
+
+
+def test_json_output_and_top_ports(capsys):
+    import json
+    port, stop = serve(b"hi")
+    try:
+        found = scanner.main(["127.0.0.1", "-p", str(port), "--json"])
+        assert json.loads(capsys.readouterr().out)[0]["port"] == port == found[0]["port"]
+    finally:
+        stop()
+    assert 22 in scanner.TOP_PORTS and len(scanner.TOP_PORTS) == 20

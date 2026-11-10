@@ -9,6 +9,7 @@ it refuses public IP addresses to prevent accidents.
 """
 import argparse
 import ipaddress
+import json
 import socket
 from concurrent.futures import ThreadPoolExecutor
 
@@ -19,6 +20,10 @@ SERVICES = {21: "ftp", 22: "ssh", 23: "telnet", 25: "smtp", 53: "dns", 80: "http
 # Services that send passwords unencrypted: worth flagging in a report.
 RISKY = {21: "FTP sends passwords in clear text", 23: "Telnet sends passwords in clear text",
          445: "SMB exposed; common ransomware target", 3389: "RDP exposed to the network"}
+
+
+# The 20 ports most worth checking first on a typical machine. Used by --top.
+TOP_PORTS = [21, 22, 23, 25, 53, 80, 110, 139, 143, 443, 445, 993, 995, 1433, 3306, 3389, 5432, 5900, 8080, 8443]
 
 
 def parse_ports(spec: str) -> list[int]:
@@ -70,11 +75,16 @@ def main(argv=None):
     ap = argparse.ArgumentParser(description="TCP connect scanner (own machines only)")
     ap.add_argument("host")
     ap.add_argument("-p", "--ports", default="1-1024")
+    ap.add_argument("--top", action="store_true", help="scan only the 20 most common ports")
+    ap.add_argument("--json", action="store_true", help="print results as JSON for other tools")
     ap.add_argument("--allow-public", action="store_true", help="I own or am authorized to test this host")
     a = ap.parse_args(argv)
     if not a.allow_public and not is_private(a.host):
         ap.error("refusing public address; pass --allow-public only if you are authorized")
-    found = scan(a.host, parse_ports(a.ports))
+    found = scan(a.host, TOP_PORTS if a.top else parse_ports(a.ports))
+    if a.json:                                  # machine-readable output, nothing else printed
+        print(json.dumps(found, indent=2))
+        return found
     for r in found:
         note = f"  ! {r['risk']}" if r["risk"] else ""
         print(f"{r['port']:>5}/tcp open  {r['service']:<9} {r['banner'][:40]}{note}")
